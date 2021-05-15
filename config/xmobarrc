@@ -1,0 +1,27 @@
+Config { font = "xft:Ubuntu:weight=bold:pixelsize=11:antialias=true:hinting=true"
+	,additionalFonts = [ "xft:Mononoki Nerd Font:pixelsize=11:antialias=true:hinting=true"
+                           , "xft:Font Awesome 5 Free Solid:pixelsize=12"
+                           , "xft:Font Awesome 5 Brands:pixelsize=12"
+                           ]
+
+       , borderColor = "black"
+       , border = TopB
+       , bgColor = "#282c34"
+       , fgColor = "#ff6c6b"
+       , alpha = 255
+       , position = TopW L 100
+       , allDesktops = True
+       , overrideRedirect = True
+       , iconRoot = "/home/ajabraham/.xmonad/xpm/"  -- default: "."
+       , commands = [
+                      -- Run Network "enp6s0" ["-L","0","-H","32", "--normal","green","--high","red"] 10
+		      Run Network "enp6s0" ["--template", "Net: <tx>kB|<rx>kB", "-L","1000","-H","5000", "--low", "gray", "--normal","green","--high","red"] 10
+                    , Run Cpu ["-L","3","-H","50", "--normal","green","--high","red"] 10
+                    , Run Memory ["-t","Mem: <usedratio>%"] 10
+                    , Run Swap [] 10
+		    , Run Date "%a %Y-%m-%d %H:%M:%S" "date" 10
+		    , Run StdinReader
+                    ]
+       , sepChar = "%"
+       , alignSep = "}{"
+       , template = " <icon=logo.xpm/> <fc=#666666>|</fc> %StdinReader% }{ %cpu% | %memory% | %enp6s0% <fc=#ee9a00>%date%</fc>" }
