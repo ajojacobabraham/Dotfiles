@@ -1,30 +1,60 @@
-# Inserts a blank line between shell prompts
-add_newline = true
 
-# Replace the "❯" symbol in the prompt with "➜"
-[character]                            # The name of the module we are configuring is "character"
-success_symbol = "[➜](bold green)"     # The "success_symbol" segment is being set to "➜" with the color "bold green"
+# Starship command prompt configuration file. Colour choice and over-use of emoji
+# is to help blend in with Ubuntu MATE default theme, Ambiant-Mate.
 
-# Disable the package module, hiding it from the prompt completely
+
+# disable starship from forcing a new line to be taken. Solved the empty line 
+# at start of terminal
+add_newline = false
+
+[line_break]
+disabled = true
+
+[username]
+style_user = "white bold"
+style_root = "black bold"
+format = "[$user]($style) "
+disabled = false
+show_always = true
+
+
+# Replace the "❯" symbol in the prompt with "➟"
+[character]      # The name of the module we are configuring is "character"
+error_symbol = "  ✗"
+
+[directory]
+truncation_length = 8
+truncation_symbol = "…/"
+
+[hostname]
+ssh_only = false
+format =  "on [$hostname](bold red) "
+trim_at = ".companyname.com"
+disabled = false
+
+
+[cmd_duration]
+min_time = 4
+show_milliseconds = false
+disabled = false
+style = "bold italic #87A752"
+
+[nodejs]
+disabled = true
+
+[gcloud]
+disabled = true
+
+
 [package]
 disabled = true
 
-format = """
-$username\
-$hostname\
-$directory\
-$package\
-$java\
-$nodejs\
-$php\
-$python\
-$rust\
-$memory_usage\
-$custom\
-$cmd_duration\
-$line_break\
-$jobs\
-$time\
-$status\
-$shell\
-$character"""
+[git_branch]
+disabled = true
+
+[time]
+disabled = false
+format = '🕙[\[ $time \]]($style) '
+time_format = "%T"
+utc_time_offset = "local"
+time_range = "10:00:00-14:00:00"
