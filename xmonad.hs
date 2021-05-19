@@ -110,6 +110,11 @@ myClickJustFocuses = False
 myBorderWidth :: Dimension
 myBorderWidth   = 2
 
+windowCount :: X (Maybe String)
+windowCount = gets $ Just . show . length . W.integrate' . W.stack . W.workspace . W.current . windowset
+
+
+
 -- modMask lets you specify which modkey you want to use. The default
 -- is mod1Mask ("left alt").  You may also consider using mod3Mask
 -- ("right alt"), which does not conflict with emacs keybindings. The
@@ -287,7 +292,7 @@ myLayout = tiled ||| Mirror tiled ||| Full
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
 
-myWorkspaces = [" dev ", " www ", " sys ", " doc ", " vbox ", " chat ", " mus ", " vid ", " gfx "]
+myWorkspaces = [" Code ", " Study ", " 3 ", " 4 ", " 5 ", " 6 "]
 -- myWorkspaces = [" 1 ", " 2 ", " 3 ", " 4 ", " 5 ", " 6 ", " 7 ", " 8 ", " 9 "]
 
 xmobarEscape :: String -> String
@@ -299,10 +304,10 @@ xmobarEscape = concatMap doubleLts
 myClickableWorkspaces :: [String]
 myClickableWorkspaces = clickable . (map xmobarEscape)
                -- $ [" 1 ", " 2 ", " 3 ", " 4 ", " 5 ", " 6 ", " 7 ", " 8 ", " 9 "]
-               $ [" dev ", " www ", " sys ", " doc ", " vbox ", " chat ", " mus ", " vid ", " gfx "]
+               $ [" Code ", " Study ", " 3 ", " 4 ", " 5 ", " 6 "]
   where
         clickable l = [ "<action=xdotool key super+" ++ show (n) ++ ">" ++ ws ++ "</action>" |
-                      (i,ws) <- zip [1..9] l,
+                      (i,ws) <- zip [1..6] l,
                       let n = i ]
 
 ------------------------------------------------------------------------
@@ -388,7 +393,15 @@ main = do
     startupHook = myStartupHook,
     logHook = workspaceHistoryHook <+> myLogHook <+> dynamicLogWithPP xmobarPP
       { ppOutput = hPutStrLn xmproc
-      , ppTitle = id
+      , ppCurrent = xmobarColor "#98be65" "" . wrap "[" "]" 
+      , ppVisible = xmobarColor "#98be65" "" 
+      , ppHidden = xmobarColor "#82AAFF" "" . wrap "*" "" 
+      , ppHiddenNoWindows = xmobarColor "#c792ea" "" 
+      , ppTitle = xmobarColor "#b3afc2" "" . shorten 60 
+      , ppSep =  "<fc=#666666> <fn=1>|</fn> </fc>" 
+      , ppExtras  = [windowCount]        
+      , ppOrder  = \(ws:l:t:ex) -> [ws,l]++ex++[t]    
+      
       }
       }
 
