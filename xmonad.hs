@@ -9,25 +9,88 @@
 
 import Graphics.X11.ExtraTypes.XF86
 
+  -- Base
 import XMonad
-import XMonad.Config
-import Data.Monoid
+import System.Directory
+import System.IO (hPutStrLn)
 import System.Exit
-import System.IO
+import qualified XMonad.StackSet as W
 
+    -- Actions
+import XMonad.Actions.CopyWindow (kill1, killAllOtherCopies)
+import XMonad.Actions.CycleWS (moveTo, shiftTo, WSType(..), nextScreen, prevScreen)
+import XMonad.Actions.GridSelect
+import XMonad.Actions.MouseResize
+import XMonad.Actions.Promote
+import XMonad.Actions.RotSlaves (rotSlavesDown, rotAllDown)
+import qualified XMonad.Actions.TreeSelect as TS
+import XMonad.Actions.WindowGo (runOrRaise)
+import XMonad.Actions.WithAll (sinkAll, killAll)
+import qualified XMonad.Actions.Search as S
+
+    -- Data
+import Data.Char (isSpace, toUpper)
+import Data.Monoid
+import Data.Maybe (isJust)
+import Data.Tree
+import qualified Data.Map as M
+
+    -- Hooks
 import XMonad.Hooks.DynamicLog
-import XMonad.Hooks.ManageDocks
-import XMonad.Actions.WorkspaceNames
+import XMonad.Hooks.EwmhDesktops  -- for some fullscreen events, also for xcomposite in obs.
+import XMonad.Hooks.FadeInactive
+import XMonad.Hooks.ManageDocks 
+import XMonad.Hooks.ManageHelpers (isFullscreen, doFullFloat)
+import XMonad.Hooks.ServerMode
+import XMonad.Hooks.SetWMName
+import XMonad.Hooks.WorkspaceHistory
 
-import XMonad.Util.Dmenu
-import XMonad.Util.EZConfig (additionalKeys)
+    -- Layouts
+import XMonad.Layout.GridVariants (Grid(Grid))
+import XMonad.Layout.SimplestFloat
+import XMonad.Layout.Spiral
+import XMonad.Layout.ResizableTile
+import XMonad.Layout.Tabbed
+import XMonad.Layout.ThreeColumns
+
+    -- Layouts modifiers
+import XMonad.Layout.LayoutModifier
+import XMonad.Layout.LimitWindows (limitWindows, increaseLimit, decreaseLimit)
+import XMonad.Layout.Magnifier
+import XMonad.Layout.MultiToggle (mkToggle, single, EOT(EOT), (??))
+import XMonad.Layout.MultiToggle.Instances (StdTransformers(NBFULL, MIRROR, NOBORDERS))
+import XMonad.Layout.NoBorders
+import XMonad.Layout.Renamed
+import XMonad.Layout.ShowWName
+import XMonad.Layout.Simplest
+import XMonad.Layout.Spacing
+import XMonad.Layout.SubLayouts
+import XMonad.Layout.WindowNavigation
+import XMonad.Layout.WindowArranger (windowArrange, WindowArrangerMsg(..))
+import qualified XMonad.Layout.ToggleLayouts as T (toggleLayouts, ToggleLayout(Toggle))
+import qualified XMonad.Layout.MultiToggle as MT (Toggle(..))
+
+    -- Prompt
+import XMonad.Prompt
+import XMonad.Prompt.Input
+import XMonad.Prompt.FuzzyMatch
+import XMonad.Prompt.Man
+import XMonad.Prompt.Pass
+import XMonad.Prompt.Shell
+import XMonad.Prompt.Ssh
+import XMonad.Prompt.XMonad
+import Control.Arrow (first)
+
+   -- Text
+import Text.Printf
+
+   -- Utilities
+import XMonad.Util.EZConfig (additionalKeysP)
 import XMonad.Util.NamedScratchpad
 import XMonad.Util.Run (runProcessWithInput, safeSpawn, spawnPipe)
 import XMonad.Util.SpawnOnce
 
 
-import qualified XMonad.StackSet as W
-import qualified Data.Map        as M
 
 -- The preferred terminal program, which is used in a binding below and by
 -- certain contrib modules.
@@ -63,10 +126,15 @@ myModMask       = mod4Mask
 --
 -- > workspaces = ["web", "irc", "code" ] ++ map show [4..9]
 --
-myWorkspaces    = ["1","2","3","4","5","6","7","8","9"]
+--myWorkspaces    = ["1","2","3","4","5","6","7","8","9"]
 
 -- Border colors for unfocused and focused windows, respectively.
 --
+
+-- dt copy
+
+
+
 myNormalBorderColor  = "#282c34"
 myFocusedBorderColor = "#46d9ff"
 
@@ -219,6 +287,24 @@ myLayout = tiled ||| Mirror tiled ||| Full
      -- Percent of screen to increment by when resizing panes
      delta   = 3/100
 
+myWorkspaces = [" dev ", " www ", " sys ", " doc ", " vbox ", " chat ", " mus ", " vid ", " gfx "]
+-- myWorkspaces = [" 1 ", " 2 ", " 3 ", " 4 ", " 5 ", " 6 ", " 7 ", " 8 ", " 9 "]
+
+xmobarEscape :: String -> String
+xmobarEscape = concatMap doubleLts
+  where
+        doubleLts '<' = "<<"
+        doubleLts x   = [x]
+
+myClickableWorkspaces :: [String]
+myClickableWorkspaces = clickable . (map xmobarEscape)
+               -- $ [" 1 ", " 2 ", " 3 ", " 4 ", " 5 ", " 6 ", " 7 ", " 8 ", " 9 "]
+               $ [" dev ", " www ", " sys ", " doc ", " vbox ", " chat ", " mus ", " vid ", " gfx "]
+  where
+        clickable l = [ "<action=xdotool key super+" ++ show (n) ++ ">" ++ ws ++ "</action>" |
+                      (i,ws) <- zip [1..9] l,
+                      let n = i ]
+
 ------------------------------------------------------------------------
 -- Window rules:
 
@@ -257,7 +343,10 @@ myEventHook = mempty
 -- Perform an arbitrary action on each internal state change or X event.
 -- See the 'XMonad.Hooks.DynamicLog' extension for examples.
 --
-myLogHook = return ()
+myLogHook :: X ()
+myLogHook = fadeInactiveLogHook fadeAmount
+    where fadeAmount = 1.0
+
 
 ------------------------------------------------------------------------
 -- Startup hook
@@ -279,6 +368,7 @@ myStartupHook = do
 --main = xmonad defaults
 
 main = do
+  home <- getHomeDirectory
   xmproc <- spawnPipe "/usr/bin/xmobar"
   xmonad $ docks defaultConfig {
     modMask = mod4Mask, -- command key
@@ -287,16 +377,21 @@ main = do
     focusedBorderColor = myFocusedBorderColor,
     terminal = myTerminal,
     keys = myKeys,
-    workspaces = map show [1..8],
-    manageHook = manageDocks <+> manageHook defaultConfig,
+    workspaces = myClickableWorkspaces,
+    manageHook = ( isFullscreen --> doFullFloat ) <+> myManageHook <+> manageDocks,
+    handleEventHook    = serverModeEventHookCmd
+                               <+> serverModeEventHook
+                               <+> serverModeEventHookF "XMONAD_PRINT" (io . putStrLn)
+                               <+> docksEventHook,
+
     layoutHook = avoidStruts $ layoutHook defaultConfig,
     startupHook = myStartupHook,
-    logHook = workspaceNamesPP xmobarPP
+    logHook = workspaceHistoryHook <+> myLogHook <+> dynamicLogWithPP xmobarPP
       { ppOutput = hPutStrLn xmproc
       , ppTitle = id
       }
-      >>= dynamicLogWithPP
-}
+      }
+
 
 -- A structure containing your configuration settings, overriding
 -- fields in the default config. Any you don't override, will
